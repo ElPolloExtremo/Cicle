@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#6B55C8">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Mapa del Ciclo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=DM+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: una columna de lectura. Perfiles arriba, estado de hoy, calendario de 3 meses, curva hormonal y detalle por fase. */
+:root {
+  --bg: #F5F4F8;
+  --surface: #FFFFFF;
+  --fg: #201C2B;
+  --muted: #655F73;
+  --line: #DEDAE6;
+  --men: #C93F57;
+  --fol: #2E8F5F;
+  --ovu: #C98A12;
+  --lut: #6B55C8;
+  --on-solid: #FFFFFF;
+  --h-e: #1D7BE6;
+  --h-p: #201C2B;
+  --h-lh: #0D98A6;
+  --h-fsh: #8A8497;
+  --focus: #6B55C8;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16131D; --surface: #1F1B29; --fg: #ECE8F4; --muted: #A39DB3; --line: #332E40;
+    --men: #F0768B; --fol: #4CC088; --ovu: #EDB445; --lut: #A092F0; --on-solid: #1B1220;
+    --h-e: #5BA8FF; --h-p: #ECE8F4; --h-lh: #3CC7D4; --h-fsh: #8F89A0; --focus: #A092F0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16131D; --surface: #1F1B29; --fg: #ECE8F4; --muted: #A39DB3; --line: #332E40;
+  --men: #F0768B; --fol: #4CC088; --ovu: #EDB445; --lut: #A092F0; --on-solid: #1B1220;
+  --h-e: #5BA8FF; --h-p: #ECE8F4; --h-lh: #3CC7D4; --h-fsh: #8F89A0; --focus: #A092F0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 880px; margin-inline: auto; display: flex; flex-direction: column; gap: 34px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(30px, 6vw, 42px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 21px; font-weight: 700; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.sub { color: var(--muted); margin-top: 6px; }
+.section-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.section-head p { color: var(--muted); max-width: 62ch; }
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.btn { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; font-weight: 500; min-height: 40px; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn.danger { color: var(--men); border-color: color-mix(in srgb, var(--men) 50%, var(--line)); }
+
+/* Perfiles */
+.profiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; cursor: pointer; font-weight: 500; max-width: 100%; overflow-wrap: anywhere; min-height: 40px; }
+.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600; }
+.chip.add { border-style: dashed; color: var(--muted); background: transparent; }
+
+/* Hoy */
+.hero { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 20px; }
+.hero-main { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+.daynum { display: flex; flex-direction: column; align-items: flex-start; min-width: 96px; }
+.daynum .big { font-family: var(--font-display); font-weight: 700; font-size: clamp(64px, 16vw, 100px); line-height: 0.9; font-variant-numeric: tabular-nums; }
+.daynum .of { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.hero-phase { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.phase-line { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+.dot { width: 14px; height: 14px; border-radius: 50%; background: var(--c, var(--fg)); flex: none; }
+.tag { color: var(--muted); max-width: 56ch; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 0; }
+.stat { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.stat dt { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.stat dd { margin: 2px 0 0; }
+.stat .v { font-weight: 600; font-size: 17px; }
+.stat .s { color: var(--muted); font-size: 14px; }
+.stat.now .v { display: inline-block; background: color-mix(in srgb, var(--ovu) 25%, var(--surface)); padding: 0 8px; border-radius: 6px; }
+.notice { font-size: 14px; border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; color: var(--muted); background: var(--surface); }
+
+/* Datos del perfil */
+.settings { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 12px; }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field label { font-size: 13px; font-weight: 600; }
+.field input { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; min-width: 0; min-height: 40px; }
+.field small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.del-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.del-row small { color: var(--muted); }
+.saved { color: var(--muted); font-size: 12.5px; margin-top: 12px; }
+
+/* Calendario */
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.cal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+.cal-nav { display: flex; gap: 6px; }
+.dow, .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.dow span { text-align: center; font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 0; }
+.day {
+  position: relative; height: 48px; border: 0; border-radius: 8px; cursor: pointer;
+  background: color-mix(in srgb, var(--c) 24%, var(--bg));
+  font-weight: 600; font-variant-numeric: tabular-nums; padding: 0; min-width: 0;
+}
+.day:hover { background: color-mix(in srgb, var(--c) 38%, var(--bg)); }
+.day.first, .day.first:hover { background: var(--men); color: var(--on-solid); }
+.day.today { box-shadow: inset 0 0 0 2px var(--fg); }
+.day.sel { outline: 3px solid var(--focus); outline-offset: 2px; z-index: 1; }
+.day.fertile::before { content: ""; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 3px; border-radius: 2px; background: var(--ovu); }
+.day.ov::after { content: ""; position: absolute; top: 4px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--fg); }
+.day.pre, .day.pre:hover { background: transparent; color: var(--muted); opacity: 0.45; cursor: default; font-weight: 400; }
+.daydetail { margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14.5px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; background: var(--c); display: inline-block; }
+.sw.solid { background: var(--men); }
+.mk-ov { width: 8px; height: 8px; border-radius: 50%; background: var(--fg); display: inline-block; }
+.mk-fert { width: 14px; height: 3px; border-radius: 2px; background: var(--ovu); display: inline-block; }
+
+/* Curvas */
+.chart-box { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 12px 12px; }
+#chart { width: 100%; display: block; }
+#chart text { fill: var(--muted); font-family: var(--font-body); font-size: 11.5px; }
+#chart .tick { font-variant-numeric: tabular-nums; }
+#chart .pl { font-weight: 600; }
+.hlegend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 8px 6px 0; font-size: 13px; }
+.hlegend span { display: inline-flex; align-items: center; gap: 8px; }
+.hlegend svg { width: 28px; height: 8px; overflow: visible; }
+.readout { margin: 10px 6px 0; font-size: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.readout b { font-weight: 600; }
+.axis-note { color: var(--muted); font-size: 12.5px; margin: 6px 6px 0; }
+
+/* Fases */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.tab { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 500; min-height: 40px; }
+.tab[aria-selected="true"] { background: color-mix(in srgb, var(--c) 22%, var(--surface)); border-color: var(--c); font-weight: 600; }
+.panel { display: flex; flex-direction: column; gap: 16px; }
+.panel-head { display: flex; flex-direction: column; gap: 4px; }
+.panel-head .range { color: var(--muted); font-size: 14px; }
+.blocks { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.block { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.block.support { background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-color: color-mix(in srgb, var(--c) 40%, var(--line)); }
+.block ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.block li::marker { color: var(--muted); }
+.caveat { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+/* Fechas */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+thead th { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
+tbody tr.cur { background: color-mix(in srgb, var(--lut) 10%, var(--surface)); }
+tbody th { font-weight: 600; }
+
+/* Respaldo */
+.backup { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.backup summary { cursor: pointer; font-weight: 600; }
+.backup .inner { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.backup p { color: var(--muted); font-size: 14px; }
+.backup textarea { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; resize: vertical; }
+.backup .row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.foot { color: var(--muted); font-size: 13px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 18px; }
+.foot b { color: var(--fg); font-weight: 600; }
+@media (prefers-reduced-motion: no-preference) { .day, .tab, .chip { transition: background-color .15s; } }
+</style>
+
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">Seguimiento de ciclo</p>
+    <h1>Mapa del Ciclo</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <section aria-label="Perfiles">
+    <div class="profiles" id="profiles"></div>
+  </section>
+
+  <section id="hero" aria-live="polite"></section>
+
+  <section class="settings" aria-labelledby="set-title">
+    <h2 id="set-title">Datos del perfil</h2>
+    <div class="fields">
+      <div class="field">
+        <label for="inName">Nombre del perfil</label>
+        <input id="inName" type="text" maxlength="40" autocomplete="off" placeholder="Ej: Camila">
+      </div>
+      <div class="field">
+        <label for="inStart">Primer día del último período</label>
+        <input id="inStart" type="date">
+        <small>El día en que empezó el sangrado.</small>
+      </div>
+      <div class="field">
+        <label for="inLen">Duración del ciclo (días)</label>
+        <input id="inLen" type="number" min="21" max="40" inputmode="numeric">
+        <small>Desde el primer día de un período hasta el día antes del siguiente. Lo habitual es entre 21 y 35.</small>
+      </div>
+      <div class="field">
+        <label for="inPeriod">Días de sangrado</label>
+        <input id="inPeriod" type="number" min="2" max="8" inputmode="numeric">
+        <small>Lo habitual es entre 3 y 7.</small>
+      </div>
+    </div>
+    <div class="del-row" id="delRow"></div>
+    <p class="saved">Los datos se guardan solo en este dispositivo. Un perfil marcado como ejemplo usa fechas de muestra hasta que cambies sus datos.</p>
+  </section>
+
+  <section aria-labelledby="cal-title">
+    <div class="section-head">
+      <h2 id="cal-title">Calendario</h2>
+      <p>Estimación para este mes y los dos siguientes. Toca un día para ver su fase y sus hormonas.</p>
+    </div>
+    <div class="cal-head">
+      <span class="cal-title" id="calTitle"></span>
+      <div class="cal-nav">
+        <button type="button" class="btn" id="calPrev" aria-label="Mes anterior">‹</button>
+        <button type="button" class="btn" id="calToday">Hoy</button>
+        <button type="button" class="btn" id="calNext" aria-label="Mes siguiente">›</button>
+      </div>
+    </div>
+    <div class="dow" aria-hidden="true"><span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span></div>
+    <div class="cal" id="cal"></div>
+    <p class="daydetail" id="daydetail" aria-live="polite"></p>
+    <div class="legend">
+      <span><i class="sw solid"></i>Inicio del período</span>
+      <span style="--c:var(--men)"><i class="sw"></i>Menstrual</span>
+      <span style="--c:var(--fol)"><i class="sw"></i>Folicular</span>
+      <span style="--c:var(--ovu)"><i class="sw"></i>Ovulatoria</span>
+      <span style="--c:var(--lut)"><i class="sw"></i>Lútea</span>
+      <span><i class="mk-ov"></i>Ovulación</span>
+      <span><i class="mk-fert"></i>Días fértiles</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="chart-title">
+    <div class="section-head">
+      <h2 id="chart-title">Cambios hormonales</h2>
+      <p>Así evolucionan las cuatro hormonas principales a lo largo de un ciclo típico, ajustadas a la duración del perfil. La línea punteada marca el día seleccionado en el calendario.</p>
+    </div>
+    <div class="chart-box">
+      <svg id="chart" role="img" aria-label="Curvas de estrógeno, progesterona, LH y FSH durante el ciclo"></svg>
+      <div class="hlegend">
+        <span><svg viewBox="0 0 28 8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--h-e)" stroke-width="3" stroke-linecap="round"/></svg>Estrógeno</span>
+        <span><svg viewBox="0 0 28 8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--h-p)" stroke-width="3" stroke-linecap="round"/></svg>Progesterona</span>
+        <span><svg viewBox="0 0 28 8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--h-lh)" stroke-width="2.5" stroke-dasharray="6 4"/></svg>LH</span>
+        <span><svg viewBox="0 0 28 8"><line x1="0" y1="4" x2="28" y2="4" stroke="var(--h-fsh)" stroke-width="2.5" stroke-dasharray="1.5 4" stroke-linecap="round"/></svg>FSH</span>
+      </div>
+      <p class="readout" id="readout"></p>
+      <p class="axis-note">Eje vertical: nivel relativo de cada hormona, no valores de laboratorio.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="phase-title">
+    <div class="section-head">
+      <h2 id="phase-title">Qué pasa en cada fase y qué hacer</h2>
+      <p>Se abre en la fase del día seleccionado. Cambia de pestaña para revisar las demás.</p>
+    </div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="panel" id="panel" role="tabpanel"></div>
+    <p class="caveat">La evidencia sobre ajustar el entrenamiento o la dieta a cada fase es limitada. Tómalo como una guía y prioriza siempre cómo se siente ella ese día.</p>
+  </section>
+
+  <section aria-labelledby="dates-title">
+    <div class="section-head">
+      <h2 id="dates-title">Próximas fechas</h2>
+      <p>El ciclo actual y los dos siguientes, suponiendo que mantienen la misma duración.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ciclo</th><th>Inicio del período</th><th>Ovulación</th><th>Ventana fértil</th></tr></thead>
+        <tbody id="dates"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="backup">
+    <summary>Respaldo de perfiles</summary>
+    <div class="inner">
+      <p>Genera el texto para guardar todos tus perfiles o llevarlos a otro celular. Para restaurar, pega el texto aquí y pulsa Restaurar. Restaurar reemplaza los perfiles actuales.</p>
+      <textarea id="bk" rows="5" aria-label="Texto de respaldo" spellcheck="false"></textarea>
+      <div class="row">
+        <button type="button" class="btn" id="bkMake">Generar respaldo</button>
+        <button type="button" class="btn" id="bkLoad">Restaurar desde el texto</button>
+      </div>
+      <p id="bkMsg" role="status"></p>
+    </div>
+  </details>
+
+  <footer class="foot">
+    <p><b>Son estimaciones.</b> Las fechas suponen un ciclo regular y las curvas muestran el patrón típico. Esta app no es un método anticonceptivo ni un diagnóstico.</p>
+    <p><b>Consulten con un ginecólogo o una matrona</b> si los ciclos duran menos de 21 o más de 35 días, el sangrado pasa de 7 días o empapa una toalla cada hora, el dolor no le deja hacer su vida normal, hay sangrado entre períodos, o pasan 3 meses sin menstruación (sin estar embarazada).</p>
+  </footer>
+</main>
+
+<script>
+(function () {
+  var PH = {
+    men: {
+      name: 'Menstrual', abbr: 'Menstr.',
+      tag: 'El ciclo parte de cero: bajan el estrógeno y la progesterona y el útero elimina su capa interna.',
+      hormones: 'El estrógeno y la progesterona están en su nivel más bajo. Esa caída es la señal para que el endometrio se desprenda. Las prostaglandinas, que contraen el útero, explican los cólicos.',
+      feel: ['Cansancio y menos energía, sobre todo los primeros dos días', 'Cólicos, dolor lumbar o hinchazón', 'Ánimo más sensible; hacia el final suele mejorar', 'Algunas mujeres sienten alivio al terminar la tensión previa'],
+      eat: ['Hierro: lentejas, garbanzos, carne roja, huevo, espinaca (con algo de vitamina C para absorberlo mejor)', 'Magnesio: frutos secos, semillas, chocolate amargo', 'Agua, caldos tibios e infusiones de jengibre o manzanilla', 'Si hay hinchazón, bajar la sal y los ultraprocesados'],
+      move: ['Caminatas suaves, yoga o estiramientos', 'Calor local en el vientre o la zona lumbar', 'Dormir más si el cuerpo lo pide: no es flojera'],
+      support: ['Ofrece una bolsa de agua caliente, un té o cocinar por ella', 'Quítale tareas del día a día sin que tenga que pedirlo', 'Pregunta «¿qué necesitas hoy?» en vez de suponer', 'Si el dolor le impide hacer su vida normal, anímala a consultar: no es algo que haya que aguantar']
+    },
+    fol: {
+      name: 'Folicular', abbr: 'Folic.',
+      tag: 'La FSH hace crecer folículos en el ovario y el estrógeno sube día a día.',
+      hormones: 'La hipófisis libera FSH, que madura varios folículos en el ovario. Al crecer producen estrógeno, que reconstruye el endometrio y mejora el ánimo, la concentración y la energía. Esta fase técnicamente parte con la menstruación y llega hasta la ovulación.',
+      feel: ['Energía y motivación en aumento', 'Mejor concentración y ánimo más estable', 'Piel más luminosa y menos retención de líquidos', 'Libido que empieza a subir hacia el final de la fase'],
+      eat: ['Proteínas en cada comida: huevo, pescado, legumbres, yogur', 'Verduras de colores y crucíferas (brócoli, repollo), con fibra', 'Fermentados: yogur natural, kéfir, chucrut', 'Carbohidratos de buena calidad para sostener el entrenamiento'],
+      move: ['Buen momento para fuerza, intervalos o probar un deporte nuevo', 'Aprovechar la energía para proyectos que piden foco', 'Dormir bien igual: la recuperación sigue importando'],
+      support: ['Planeen salidas, escapadas cortas o actividades nuevas', 'Es un buen momento para conversar temas importantes', 'Acompáñala en sus metas: suele estar con más ganas de avanzar']
+    },
+    ovu: {
+      name: 'Ovulatoria', abbr: 'Ovul.',
+      tag: 'Un pico de LH libera el óvulo, unas 24 a 36 horas después. Es la ventana de mayor fertilidad.',
+      hormones: 'El estrógeno llega a su máximo y dispara el pico de LH. El folículo dominante libera el óvulo, que vive unas 12 a 24 horas. Los espermatozoides pueden sobrevivir hasta 5 días, por eso la ventana fértil abarca unos 6 días que terminan en la ovulación.',
+      feel: ['Pico de energía, sociabilidad y confianza', 'Mayor libido', 'Flujo transparente y elástico, parecido a la clara de huevo', 'A veces un dolor leve en un lado del bajo vientre', 'La temperatura basal sube entre 0,3 y 0,5 °C justo después de ovular'],
+      eat: ['Mucha agua y alimentos ricos en antioxidantes: frutos rojos, cítricos, verduras', 'Proteína y grasas buenas: palta, pescado azul, nueces', 'Comidas ligeras si siente algo de hinchazón'],
+      move: ['Entrenamientos intensos o sociales: deportes en grupo, baile, trote', 'Calentar bien antes del ejercicio de impacto', 'Si hay molestia en el vientre, bajar la intensidad'],
+      support: ['Si buscan embarazo, esta es la ventana de mayor probabilidad; los días previos a la ovulación son los más fértiles', 'Si no lo buscan, usen un método anticonceptivo confiable: calcular por fechas no es un método seguro', 'Buen momento para planes sociales y citas']
+    },
+    lut: {
+      name: 'Lútea', abbr: 'Lútea',
+      tag: 'El cuerpo lúteo produce progesterona. Si no hay embarazo, las hormonas caen hacia el final.',
+      hormones: 'Tras la ovulación, el folículo vacío se convierte en cuerpo lúteo y produce progesterona, que da calma y sueño y sube la temperatura. Si no hay embarazo, el cuerpo lúteo se deshace en los últimos días de la fase y la progesterona y el estrógeno bajan de golpe. Esa caída está detrás del síndrome premenstrual.',
+      feel: ['Primera mitad: más tranquila, con más sueño y apetito', 'Últimos 5 a 7 días: irritabilidad, ánimo bajo o ansiedad en algunas mujeres', 'Hinchazón, sensibilidad en los pechos, dolor de cabeza y antojos', 'Sueño más liviano o interrumpido'],
+      eat: ['Carbohidratos complejos (avena, arroz integral, camote) para estabilizar el ánimo y los antojos', 'Calcio y magnesio: lácteos o alternativas fortificadas, semillas, verduras de hoja', 'Menos sal, alcohol y cafeína si hay hinchazón o ansiedad', 'Comer a horarios regulares evita bajones de azúcar que empeoran la irritabilidad'],
+      move: ['Primera mitad: fuerza moderada y trote suave', 'Segunda mitad: pilates, yoga, caminatas o natación', 'Horario de sueño fijo y pantallas fuera de la cama'],
+      support: ['Los cambios de ánimo tienen base hormonal: no los tomes como algo personal', 'Evita abrir discusiones largas cuando esté muy sensible; retómenlas unos días después', 'Valida lo que siente antes de ofrecer soluciones', 'Si la tristeza, la ansiedad o la irritabilidad son intensas todos los meses, puede ser un trastorno disfórico premenstrual: conviene consultar']
+    }
+  };
+  var ORDER = ['men', 'fol', 'ovu', 'lut'];
+  var KEY2 = 'mapa-ciclo-v2', KEY1 = 'mapa-ciclo-v1';
+  var MAX_PROFILES = 12;
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function noon(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12); }
+  function addDays(d, n) { return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12); }
+  function diff(a, b) { return Math.round((b - a) / 864e5); }
+  function parse(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2], 12); }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  var fmt = new Intl.DateTimeFormat('es-CL', { weekday: 'short', day: 'numeric', month: 'short' });
+  function f(d) { return fmt.format(d).replace(/\./g, '').replace(',', ''); }
+  function pl(n, a, b) { return n + ' ' + (n === 1 ? a : b); }
+  function rel(n) { return n === 0 ? 'hoy' : n === 1 ? 'mañana' : 'en ' + pl(n, 'día', 'días'); }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+
+  var today = noon(new Date());
+
+  /* Datos y perfiles */
+  function newProfile(name) { return { id: uid(), name: name, start: iso(addDays(today, -11)), L: 28, P: 5, example: true }; }
+  function sanitize(p, i) {
+    p = p || {};
+    var ok = /^\d{4}-\d{2}-\d{2}$/.test(String(p.start));
+    return {
+      id: String(p.id || uid()).slice(0, 24),
+      name: String(p.name || ('Persona ' + (i + 1))).slice(0, 40),
+      start: ok ? p.start : iso(addDays(today, -11)),
+      L: clamp(parseInt(p.L, 10) || 28, 21, 40),
+      P: clamp(parseInt(p.P, 10) || 5, 2, 8),
+      example: !!p.example
+    };
+  }
+  function normalize(d) {
+    var seen = {};
+    var ps = d.profiles.slice(0, MAX_PROFILES).map(function (p, i) {
+      var q = sanitize(p, i);
+      if (seen[q.id]) q.id = uid();
+      seen[q.id] = 1;
+      return q;
+    });
+    var act = ps.some(function (p) { return p.id === d.active; }) ? d.active : ps[0].id;
+    return { profiles: ps, active: act };
+  }
+  function loadData() {
+    try {
+      var r = localStorage.getItem(KEY2);
+      if (r) {
+        var d = JSON.parse(r);
+        if (d && Array.isArray(d.profiles) && d.profiles.length) return normalize(d);
+      }
+      var o = localStorage.getItem(KEY1);
+      if (o) {
+        var p = JSON.parse(o);
+        if (p) return normalize({ profiles: [{ name: p.name || 'Persona 1', start: p.start, L: p.L, P: p.P, example: !!p.example }] });
+      }
+    } catch (e) {}
+    var def = newProfile('Persona 1');
+    return { profiles: [def], active: def.id };
+  }
+  function save() {
+    try { localStorage.setItem(KEY2, JSON.stringify(data)); } catch (e) {}
+  }
+  var data = loadData();
+  var selDate = null, tab = null, calOff = 0, confirmDel = false;
+
+  function cur() {
+    for (var i = 0; i < data.profiles.length; i++) if (data.profiles[i].id === data.active) return data.profiles[i];
+    return data.profiles[0];
+  }
+
+  /* Modelo del ciclo */
+  function model() {
+    var st = cur();
+    var L = clamp(parseInt(st.L, 10) || 28, 21, 40);
+    var ov = L - 14;
+    var P = clamp(parseInt(st.P, 10) || 5, 2, Math.min(8, ov - 1));
+    var start = parse(st.start);
+    if (isNaN(start.getTime())) start = addDays(today, -11);
+    if (start > today) start = today;
+    var d = diff(start, today);
+    var k = Math.floor(d / L);
+    var cs = addDays(start, k * L);
+    var ovS = Math.max(P + 1, ov - 1);
+    var ovE = Math.max(ovS, ov + 1);
+    return { L: L, ov: ov, P: P, ovS: ovS, ovE: ovE, start: start, cs: cs, day: d - k * L + 1, k: k, next: addDays(cs, L) };
+  }
+  function phaseOf(m, d) { return d <= m.P ? 'men' : d < m.ovS ? 'fol' : d <= m.ovE ? 'ovu' : 'lut'; }
+  function rangeOf(m, p) {
+    if (p === 'men') return [1, m.P];
+    if (p === 'fol') return [m.P + 1, m.ovS - 1];
+    if (p === 'ovu') return [m.ovS, m.ovE];
+    return [m.ovE + 1, m.L];
+  }
+  function dayInfo(m, date) {
+    var n = diff(m.start, date);
+    if (n < 0) return null;
+    var k = Math.floor(n / m.L);
+    return { day: n - k * m.L + 1, k: k };
+  }
+  function selInfo(m) {
+    var d = selDate || today, i = dayInfo(m, d);
+    if (!i) { d = today; i = dayInfo(m, d); }
+    return { date: d, day: i.day, k: i.k };
+  }
+
+  /* Curvas hormonales: patrón típico, nivel relativo 0 a 1 */
+  function g(x, mu, s) { return Math.exp(-((x - mu) * (x - mu)) / (2 * s * s)); }
+  function curves(m) {
+    var pk = m.ov - 1, s = Math.max(1.8, m.ov / 5);
+    return {
+      e: function (d) { return 0.12 + 0.88 * (d <= pk ? g(d, pk, s) : g(d, pk, 1.4)) + 0.3 * g(d, m.ov + 7, 3.2); },
+      p: function (d) { return 0.05 + 0.95 * g(d, m.ov + 7, 3.4); },
+      lh: function (d) { return 0.1 + 0.9 * g(d, pk, 0.8); },
+      fsh: function (d) { return 0.15 + 0.25 * g(d, 2, 2.5) + 0.3 * g(d, pk, 0.9); }
+    };
+  }
+  function lvl(fn, d) {
+    var v = fn(d);
+    var w = v < 0.25 ? 'bajo' : v < 0.55 ? 'moderado' : 'alto';
+    var a = fn(d + 0.5), b = fn(d - 0.5);
+    var t = a > b + 0.03 ? ' y subiendo' : a < b - 0.03 ? ' y bajando' : '';
+    return w + t;
+  }
+
+  /* Perfiles */
+  function renderProfiles() {
+    var h = data.profiles.map(function (p) {
+      return '<button type="button" class="chip" data-id="' + esc(p.id) + '" aria-pressed="' + (p.id === data.active) + '">' + esc(p.name || 'Sin nombre') + '</button>';
+    }).join('');
+    if (data.profiles.length < MAX_PROFILES) h += '<button type="button" class="chip add" data-add="1">+ Agregar perfil</button>';
+    $('profiles').innerHTML = h;
+  }
+  function renderDel() {
+    var only = data.profiles.length < 2;
+    if (!confirmDel) {
+      $('delRow').innerHTML = '<button type="button" class="btn danger" data-del="ask"' + (only ? ' disabled' : '') + '>Eliminar este perfil</button>' + (only ? '<small>Debe quedar al menos un perfil.</small>' : '');
+    } else {
+      $('delRow').innerHTML = '<span>¿Eliminar «' + esc(cur().name || 'Sin nombre') + '»? No se puede deshacer.</span><button type="button" class="btn danger" data-del="yes">Sí, eliminar</button><button type="button" class="btn" data-del="no">Cancelar</button>';
+    }
+  }
+  function fillInputs() {
+    var st = cur();
+    $('inName').value = st.name || '';
+    $('inStart').value = st.start;
+    $('inStart').max = iso(today);
+    $('inLen').value = st.L;
+    $('inPeriod').value = st.P;
+  }
+
+  /* Hoy */
+  function renderHero(m) {
+    var p = phaseOf(m, m.day), ph = PH[p];
+    var toNext = m.L + 1 - m.day;
+    var ovThis = addDays(m.cs, m.ov - 1);
+    var fs = m.ov - 5, fe = m.ov;
+    var ovSub = m.day <= m.ov ? rel(m.ov - m.day) : 'hace ' + pl(m.day - m.ov, 'día', 'días');
+    var fv, fsub, fnow = '';
+    if (m.day < fs) { fv = 'Aún no'; fsub = 'empieza ' + rel(fs - m.day); }
+    else if (m.day <= fe) { fv = 'Ahora'; fnow = ' now'; fsub = m.day === fe ? 'último día, coincide con la ovulación' : 'termina ' + rel(fe - m.day); }
+    else { fv = 'Terminó'; fsub = 'la próxima empieza ' + rel(m.L - m.day + fs); }
+    var notes = '';
+    if (cur().example) notes += '<p class="notice">Este perfil usa un ciclo de ejemplo. Ingresa la fecha real en «Datos del perfil».</p>';
+    else if (m.k >= 1) notes += '<p class="notice">La fecha de inicio es de hace más de un ciclo, así que se muestra el ciclo proyectado. Actualízala cuando empiece la próxima menstruación.</p>';
+    $('hero').innerHTML =
+      '<div class="hero" style="--c:var(--' + p + ')">' +
+      '<div class="hero-main">' +
+      '<div class="daynum"><span class="big">' + m.day + '</span><span class="of">de ' + m.L + ' días</span></div>' +
+      '<div class="hero-phase"><p class="phase-line"><i class="dot"></i>Fase ' + ph.name.toLowerCase() + '</p><p class="tag">' + ph.tag + '</p></div>' +
+      '</div>' +
+      '<dl class="stats">' +
+      '<div class="stat"><dt>Próxima menstruación</dt><dd><span class="v">' + f(m.next) + '</span><br><span class="s">' + rel(toNext) + '</span></dd></div>' +
+      '<div class="stat"><dt>Ovulación estimada</dt><dd><span class="v">' + f(ovThis) + '</span><br><span class="s">' + ovSub + '</span></dd></div>' +
+      '<div class="stat' + fnow + '"><dt>Ventana fértil</dt><dd><span class="v">' + fv + '</span><br><span class="s">' + fsub + '</span></dd></div>' +
+      '</dl>' + notes + '</div>';
+  }
+
+  /* Calendario */
+  function renderCalendar(m) {
+    var startOff = (m.start.getFullYear() - today.getFullYear()) * 12 + m.start.getMonth() - today.getMonth();
+    var minOff = Math.max(-1, startOff);
+    calOff = clamp(calOff, minOff, 2);
+    var first = new Date(today.getFullYear(), today.getMonth() + calOff, 1, 12);
+    var label = new Intl.DateTimeFormat('es-CL', { month: 'long', year: 'numeric' }).format(first);
+    $('calTitle').textContent = label.charAt(0).toUpperCase() + label.slice(1);
+    $('calPrev').disabled = calOff <= minOff;
+    $('calNext').disabled = calOff >= 2;
+    var dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    var lead = (first.getDay() + 6) % 7;
+    var si = selInfo(m), selIso = iso(si.date), todayIso = iso(today), h = '', i;
+    for (i = 0; i < lead; i++) h += '<span></span>';
+    for (i = 1; i <= dim; i++) {
+      var date = new Date(first.getFullYear(), first.getMonth(), i, 12);
+      var info = dayInfo(m, date);
+      if (!info) { h += '<button type="button" class="day pre" disabled aria-label="' + f(date) + ', antes del registro">' + i + '</button>'; continue; }
+      var p = phaseOf(m, info.day), di = iso(date);
+      var fert = info.day >= m.ov - 5 && info.day <= m.ov;
+      var cls = 'day' + (info.day === 1 ? ' first' : '') + (di === todayIso ? ' today' : '') + (di === selIso ? ' sel' : '') + (fert ? ' fertile' : '') + (info.day === m.ov ? ' ov' : '');
+      var lab = f(date) + ', día ' + info.day + ' del ciclo, fase ' + PH[p].name.toLowerCase() + (info.day === 1 ? ', inicio del período' : '') + (info.day === m.ov ? ', ovulación' : fert ? ', día fértil' : '') + (di === todayIso ? ', hoy' : '');
+      h += '<button type="button" class="' + cls + '" data-date="' + di + '" style="--c:var(--' + p + ')" aria-pressed="' + (di === selIso) + '" aria-label="' + lab + '">' + i + '</button>';
+    }
+    $('cal').innerHTML = h;
+  }
+  function renderDayDetail(m) {
+    var si = selInfo(m), p = phaseOf(m, si.day), bits = [];
+    if (si.day === 1) bits.push('inicio del período');
+    if (si.day === m.ov) bits.push('ovulación estimada');
+    else if (si.day >= m.ov - 5 && si.day < m.ov) bits.push('día fértil');
+    $('daydetail').innerHTML = '<b>' + f(si.date) + '</b> · día ' + si.day + ' de ' + m.L + ' · fase ' + PH[p].name.toLowerCase() + (bits.length ? ' · ' + bits.join(', ') : '') + (si.date > today ? ' · estimado' : '');
+  }
+
+  /* Gráfico */
+  function renderChart(m) {
+    var svg = $('chart');
+    var W = Math.max(300, Math.round(svg.getBoundingClientRect().width || 600));
+    var H = 262, X0 = 38, X1 = W - 12, Y0 = 30, Y1 = 222;
+    var pw = X1 - X0, ph = Y1 - Y0;
+    function X(d) { return X0 + (d - 0.5) / m.L * pw; }
+    function Y(v) { return Y1 - v * ph * 0.94; }
+    var c = curves(m), si = selInfo(m), s = si.day, out = '';
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('height', H);
+    ORDER.forEach(function (p) {
+      var r = rangeOf(m, p);
+      if (r[1] < r[0]) return;
+      var x = X0 + (r[0] - 1) / m.L * pw, w = (r[1] - r[0] + 1) / m.L * pw;
+      out += '<rect x="' + x.toFixed(1) + '" y="' + Y0 + '" width="' + w.toFixed(1) + '" height="' + ph + '" fill="var(--' + p + ')" opacity="0.15"/>';
+      var label = w >= 76 ? PH[p].name : w >= 38 ? PH[p].abbr : '';
+      if (label) out += '<text class="pl" x="' + (x + w / 2).toFixed(1) + '" y="' + (Y0 - 10) + '" text-anchor="middle">' + label + '</text>';
+    });
+    out += '<line x1="' + X0 + '" y1="' + Y1 + '" x2="' + X1 + '" y2="' + Y1 + '" stroke="var(--line)" stroke-width="1.5"/>';
+    out += '<text x="' + (X0 - 6) + '" y="' + (Y0 + 8) + '" text-anchor="end">alto</text>';
+    out += '<text x="' + (X0 - 6) + '" y="' + (Y1 - 2) + '" text-anchor="end">bajo</text>';
+    var ticks = [1];
+    for (var t = 5; t <= m.L - 2; t += 5) ticks.push(t);
+    ticks.push(m.L);
+    ticks.forEach(function (d) {
+      out += '<line x1="' + X(d).toFixed(1) + '" y1="' + Y1 + '" x2="' + X(d).toFixed(1) + '" y2="' + (Y1 + 4) + '" stroke="var(--line)" stroke-width="1.5"/>';
+      out += '<text class="tick" x="' + X(d).toFixed(1) + '" y="' + (Y1 + 17) + '" text-anchor="middle">' + d + '</text>';
+    });
+    function path(fn) {
+      var dstr = '';
+      for (var d = 1; d <= m.L + 0.001; d += 0.25) dstr += (dstr ? 'L' : 'M') + X(d).toFixed(1) + ' ' + Y(fn(d)).toFixed(1);
+      return dstr;
+    }
+    out += '<path d="' + path(c.fsh) + '" fill="none" stroke="var(--h-fsh)" stroke-width="2.5" stroke-dasharray="1.5 4.5" stroke-linecap="round"/>';
+    out += '<path d="' + path(c.lh) + '" fill="none" stroke="var(--h-lh)" stroke-width="2.5" stroke-dasharray="6 4"/>';
+    out += '<path d="' + path(c.p) + '" fill="none" stroke="var(--h-p)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+    out += '<path d="' + path(c.e) + '" fill="none" stroke="var(--h-e)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>';
+    var sx = X(s).toFixed(1);
+    out += '<line x1="' + sx + '" y1="' + Y0 + '" x2="' + sx + '" y2="' + Y1 + '" stroke="var(--fg)" stroke-width="1.5" stroke-dasharray="3 3"/>';
+    [['e', 'var(--h-e)'], ['p', 'var(--h-p)'], ['lh', 'var(--h-lh)'], ['fsh', 'var(--h-fsh)']].forEach(function (k) {
+      out += '<circle cx="' + sx + '" cy="' + Y(c[k[0]](s)).toFixed(1) + '" r="4.5" fill="' + k[1] + '" stroke="var(--surface)" stroke-width="2"/>';
+    });
+    var anchor = X(s) < 50 ? 'start' : X(s) > W - 50 ? 'end' : 'middle';
+    var isToday = iso(si.date) === iso(today);
+    out += '<text class="pl" x="' + sx + '" y="' + (Y1 + 34) + '" text-anchor="' + anchor + '" style="fill:var(--fg)">' + (isToday ? 'Hoy · día ' : 'Día ') + s + '</text>';
+    svg.innerHTML = out;
+
+    var p = phaseOf(m, s);
+    $('readout').innerHTML = '<b>Día ' + s + ' · ' + f(si.date) + ' · fase ' + PH[p].name.toLowerCase() + '.</b> Estrógeno ' + lvl(c.e, s) + ', progesterona ' + lvl(c.p, s) + ', LH ' + lvl(c.lh, s) + '.';
+  }
+
+  /* Fases */
+  function list(a) { return '<ul>' + a.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul>'; }
+  function renderPhases(m) {
+    var curTab = tab || phaseOf(m, selInfo(m).day);
+    $('tabs').innerHTML = ORDER.map(function (p) {
+      return '<button type="button" class="tab" role="tab" data-tab="' + p + '" aria-selected="' + (p === curTab) + '" style="--c:var(--' + p + ')"><i class="dot" style="width:10px;height:10px"></i>' + PH[p].name + '</button>';
+    }).join('');
+    var ph = PH[curTab], r = rangeOf(m, curTab);
+    var rng = r[1] < r[0] ? 'Con esta duración de ciclo, esta fase casi no tiene días propios.' : (r[0] === r[1] ? 'Día ' + r[0] : 'Días ' + r[0] + ' a ' + r[1]) + ' de ' + m.L;
+    $('panel').innerHTML =
+      '<div class="panel-head"><h3>Fase ' + ph.name.toLowerCase() + '</h3><p class="range">' + rng + '</p></div>' +
+      '<div class="blocks" style="--c:var(--' + curTab + ')">' +
+      '<div class="block"><h3>Qué pasa en el cuerpo</h3><p>' + ph.hormones + '</p></div>' +
+      '<div class="block"><h3>Cómo puede sentirse</h3>' + list(ph.feel) + '</div>' +
+      '<div class="block"><h3>Alimentación</h3>' + list(ph.eat) + '</div>' +
+      '<div class="block"><h3>Movimiento y descanso</h3>' + list(ph.move) + '</div>' +
+      '<div class="block support"><h3>Cómo apoyarla</h3>' + list(ph.support) + '</div>' +
+      '</div>';
+  }
+
+  /* Fechas */
+  function renderDates(m) {
+    var names = ['Actual', 'Siguiente', 'En 2 ciclos'], h = '';
+    for (var i = 0; i < 3; i++) {
+      var cs = addDays(m.cs, i * m.L);
+      h += '<tr' + (i === 0 ? ' class="cur"' : '') + '><th scope="row">' + names[i] + '</th><td>' + f(cs) + '</td><td>' + f(addDays(cs, m.ov - 1)) + '</td><td>' + f(addDays(cs, m.ov - 5)) + ' – ' + f(addDays(cs, m.ov - 1)) + '</td></tr>';
+    }
+    $('dates').innerHTML = h;
+  }
+
+  function renderAll() {
+    var m = model();
+    $('sub').textContent = 'Perfil: ' + (cur().name || 'Sin nombre');
+    renderProfiles(); renderDel();
+    renderHero(m); renderCalendar(m); renderDayDetail(m); renderChart(m); renderPhases(m); renderDates(m);
+  }
+  function resetView() { selDate = null; tab = null; calOff = 0; confirmDel = false; }
+
+  /* Eventos */
+  $('profiles').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.hasAttribute('data-add')) {
+      var p = newProfile('Persona ' + (data.profiles.length + 1));
+      data.profiles.push(p);
+      data.active = p.id;
+      resetView(); save(); fillInputs(); renderAll();
+      $('inName').focus(); $('inName').select();
+      return;
+    }
+    var id = b.getAttribute('data-id');
+    if (id && id !== data.active) { data.active = id; resetView(); save(); fillInputs(); renderAll(); }
+  });
+  $('delRow').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-del]');
+    if (!b) return;
+    var a = b.getAttribute('data-del');
+    if (a === 'ask') { confirmDel = true; renderDel(); }
+    else if (a === 'no') { confirmDel = false; renderDel(); }
+    else if (a === 'yes' && data.profiles.length > 1) {
+      data.profiles = data.profiles.filter(function (p) { return p.id !== data.active; });
+      data.active = data.profiles[0].id;
+      resetView(); save(); fillInputs(); renderAll();
+    }
+  });
+  $('cal').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-date]');
+    if (!b) return;
+    selDate = parse(b.getAttribute('data-date'));
+    tab = null;
+    renderAll();
+  });
+  $('calPrev').addEventListener('click', function () { calOff--; renderCalendar(model()); });
+  $('calNext').addEventListener('click', function () { calOff++; renderCalendar(model()); });
+  $('calToday').addEventListener('click', function () { calOff = 0; selDate = null; tab = null; renderAll(); });
+  $('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    tab = b.getAttribute('data-tab');
+    renderPhases(model());
+  });
+  function bind(id, key) {
+    $(id).addEventListener('input', function (e) {
+      var st = cur();
+      st[key] = e.target.value;
+      if (key !== 'name') { st.example = false; selDate = null; tab = null; }
+      save(); renderAll();
+    });
+  }
+  bind('inName', 'name'); bind('inStart', 'start'); bind('inLen', 'L'); bind('inPeriod', 'P');
+
+  /* Respaldo */
+  function msg(t) { $('bkMsg').textContent = t; }
+  $('bkMake').addEventListener('click', function () {
+    var t = JSON.stringify({ profiles: data.profiles, active: data.active });
+    $('bk').value = t;
+    function manual() { $('bk').focus(); $('bk').select(); msg('Selecciona y copia el texto de arriba.'); }
+    try {
+      navigator.clipboard.writeText(t).then(function () { msg('Respaldo copiado. Guárdalo en un lugar seguro.'); }, manual);
+    } catch (e) { manual(); }
+  });
+  $('bkLoad').addEventListener('click', function () {
+    try {
+      var d = JSON.parse($('bk').value);
+      if (!d || !Array.isArray(d.profiles) || !d.profiles.length) throw new Error('vacío');
+      data = normalize(d);
+      resetView(); save(); fillInputs(); renderAll();
+      msg('Perfiles restaurados: ' + data.profiles.length + '.');
+    } catch (e) { msg('El texto no es un respaldo válido.'); }
+  });
+
+  fillInputs();
+  renderAll();
+  var lastW = 0;
+  function onResize() {
+    var w = Math.round($('chart').getBoundingClientRect().width);
+    if (w && w !== lastW) { lastW = w; renderChart(model()); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(onResize).observe($('chart').parentNode);
+  else window.addEventListener('resize', onResize);
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+</script>
+</body>
+</html>
